@@ -19,11 +19,15 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = const [
-    HomeScreen(),
-    SearchScreen(),
-    MapScreen(),
-    SettingsScreen(),
+  List<Widget> get _screens => [
+    const HomeScreen(),
+    SearchScreen(
+      onNavigateHome: () {
+        setState(() => _currentIndex = 0);
+      },
+    ),
+    const MapScreen(),
+    const SettingsScreen(),
   ];
 
   @override

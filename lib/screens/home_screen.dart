@@ -9,6 +9,9 @@ import '../services/weather_service.dart';
 import '../utils/weather_helper.dart';
 import '../utils/constants.dart';
 import '../widgets/glass_card.dart';
+import 'package:provider/provider.dart';
+import '../providers/location_provider.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -19,7 +22,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final WeatherService _weatherService = WeatherService();
-  final String _currentSlug = 'da-nang';
+  String? _lastSlug;
 
   bool _isLoading = true;
   WeatherModel? _currentWeather;
@@ -27,12 +30,17 @@ class _HomeScreenState extends State<HomeScreen> {
   List<ForecastModel>? _dailyForecast;
 
   @override
-  void initState() {
-    super.initState();
-    _loadAllData();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final currentSlug = Provider.of<LocationProvider>(context).currentSlug;
+
+    if (_lastSlug != currentSlug) {
+      _lastSlug = currentSlug;
+      _loadAllData(currentSlug);
+    }
   }
 
-  Future<void> _loadAllData() async {
+  Future<void> _loadAllData(String slug) async {
     if (_currentWeather == null) {
       setState(() => _isLoading = true);
     }
@@ -46,9 +54,9 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     final results = await Future.wait([
-      _weatherService.fetchWeatherBySlug(_currentSlug),
-      _weatherService.fetchHourlyForecast(_currentSlug),
-      _weatherService.fetchDailyForecast(_currentSlug),
+      _weatherService.fetchWeatherBySlug(slug),
+      _weatherService.fetchHourlyForecast(slug),
+      _weatherService.fetchDailyForecast(slug),
     ]);
 
     setState(() {
@@ -100,7 +108,7 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    String bgImage = provinceBackgrounds[_currentSlug] ?? defaultBackground;
+    String bgImage = provinceBackgrounds[_lastSlug] ?? defaultBackground;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -126,7 +134,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: RefreshIndicator(
               color: Colors.white,
               backgroundColor: Colors.black45,
-              onRefresh: _loadAllData,
+              onRefresh: () => _loadAllData(_lastSlug ?? 'ha-noi'),
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.symmetric(
@@ -157,28 +165,41 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHeader() {
-    return Column(
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.location_on, color: Colors.white, size: 20),
-            const SizedBox(width: 6),
+            Row(
+              children: [
+                const Icon(Icons.location_on, color: Colors.white, size: 20),
+                const SizedBox(width: 6),
+                Text(
+                  _getCleanLocationName(_currentWeather!.locationName),
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
             Text(
-              _getCleanLocationName(_currentWeather!.locationName),
-              style: const TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+              toBeginningOfSentenceCase(_getCurrentDateTime()) ??
+                  _getCurrentDateTime(),
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.white.withOpacity(0.7),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 4),
-        Text(
-          toBeginningOfSentenceCase(_getCurrentDateTime()) ??
-              _getCurrentDateTime(),
-          style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.7)),
+        IconButton(
+          icon: const Icon(LucideIcons.menu, color: Colors.white, size: 28),
+          onPressed: () => _showLocationMenu(context),
         ),
       ],
     );
@@ -669,4 +690,127 @@ class _HomeScreenState extends State<HomeScreen> {
       },
     );
   }
+}
+
+void _showLocationMenu(BuildContext context) {
+  final provider = context.read<LocationProvider>();
+  final savedSlugs = provider.savedSlugs;
+
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.transparent,
+    builder: (context) {
+      return Container(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        decoration: const BoxDecoration(
+          color: Color(0xFF1E1E24),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 5,
+              decoration: BoxDecoration(
+                color: Colors.grey[600],
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            ListTile(
+              leading: const Icon(
+                LucideIcons.navigation,
+                color: Colors.blueAccent,
+              ),
+              title: const Text(
+                'Vị trí hiện tại của tôi',
+                style: TextStyle(color: Colors.white, fontSize: 16),
+              ),
+              onTap: () async {
+                Navigator.pop(context);
+
+                String? errorMessage = await provider
+                    .fetchCurrentDeviceLocation();
+
+                if (errorMessage != null && context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Row(
+                        children: [
+                          const Icon(Icons.error_outline, color: Colors.white),
+                          const SizedBox(width: 12),
+                          Expanded(child: Text(errorMessage)),
+                        ],
+                      ),
+                      backgroundColor: const Color(0xE62E3138),
+                      elevation: 0,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      margin: const EdgeInsets.all(16),
+                      duration: const Duration(seconds: 4),
+                    ),
+                  );
+                }
+              },
+            ),
+
+            const Divider(color: Colors.white24, indent: 20, endIndent: 20),
+
+            if (savedSlugs.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(20.0),
+                child: Text(
+                  'Chưa có địa điểm nào được lưu.',
+                  style: TextStyle(color: Colors.white54),
+                ),
+              )
+            else
+              Expanded(
+                child: ListView.builder(
+                  itemCount: savedSlugs.length,
+                  itemBuilder: (context, index) {
+                    String slug = savedSlugs[index];
+                    String provinceName = provincesMap.entries
+                        .firstWhere(
+                          (entry) => entry.value == slug,
+                          orElse: () => MapEntry(slug, slug),
+                        )
+                        .key;
+
+                    bool isCurrent = provider.currentSlug == slug;
+
+                    return ListTile(
+                      leading: Icon(
+                        Icons.favorite,
+                        color: isCurrent ? Colors.blueAccent : Colors.redAccent,
+                      ),
+                      title: Text(
+                        provinceName,
+                        style: TextStyle(
+                          color: isCurrent ? Colors.blueAccent : Colors.white,
+                          fontWeight: isCurrent
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                        ),
+                      ),
+                      trailing: isCurrent
+                          ? const Icon(Icons.check, color: Colors.blueAccent)
+                          : null,
+                      onTap: () {
+                        Navigator.pop(context);
+                        provider.changeLocation(slug);
+                      },
+                    );
+                  },
+                ),
+              ),
+          ],
+        ),
+      );
+    },
+  );
 }
