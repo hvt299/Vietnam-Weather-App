@@ -78,3 +78,81 @@ const Map<String, String> provincesMap = {
   'Bạc Liêu': 'bac-lieu',
   'Cà Mau': 'ca-mau',
 };
+
+const String defaultBackground =
+    'https://images.unsplash.com/photo-1601134467661-3d775b999c8b?q=80&w=1080&auto=format&fit=crop';
+
+const Map<String, String> provinceBackgrounds = {
+  'ha-giang': defaultBackground,
+  'cao-bang': defaultBackground,
+  'bac-kan': defaultBackground,
+  'tuyen-quang': defaultBackground,
+  'thai-nguyen': defaultBackground,
+  'lang-son': defaultBackground,
+  'quang-ninh': defaultBackground,
+  'bac-giang': defaultBackground,
+  'phu-tho': defaultBackground,
+
+  'lao-cai': defaultBackground,
+  'dien-bien': defaultBackground,
+  'lai-chau': defaultBackground,
+  'son-la': defaultBackground,
+  'yen-bai': defaultBackground,
+  'hoa-binh': defaultBackground,
+
+  'ha-noi': defaultBackground,
+  'vinh-phuc': defaultBackground,
+  'bac-ninh': defaultBackground,
+  'hai-duong': defaultBackground,
+  'hai-phong': defaultBackground,
+  'hung-yen': defaultBackground,
+  'thai-binh': defaultBackground,
+  'ha-nam': defaultBackground,
+  'nam-dinh': defaultBackground,
+  'ninh-binh': defaultBackground,
+
+  'thanh-hoa': defaultBackground,
+  'nghe-an': defaultBackground,
+  'ha-tinh': defaultBackground,
+  'quang-binh': defaultBackground,
+  'quang-tri': defaultBackground,
+  'thua-thien-hue': defaultBackground,
+
+  'da-nang':
+      'https://cdnphoto.dantri.com.vn/m-g8nlg06kMKlBiZddeSddryC7c=/thumb_w/1020/2024/05/07/a2-3-1715069946395.jpg',
+
+  'quang-nam': defaultBackground,
+  'quang-ngai': defaultBackground,
+  'binh-dinh': defaultBackground,
+  'phu-yen': defaultBackground,
+  'khanh-hoa': defaultBackground,
+  'ninh-thuan': defaultBackground,
+  'binh-thuan': defaultBackground,
+
+  'kon-tum': defaultBackground,
+  'gia-lai': defaultBackground,
+  'dak-lak': defaultBackground,
+  'dak-nong': defaultBackground,
+  'lam-dong': defaultBackground,
+
+  'binh-phuoc': defaultBackground,
+  'tay-ninh': defaultBackground,
+  'binh-duong': defaultBackground,
+  'dong-nai': defaultBackground,
+  'ba-ria-vung-tau': defaultBackground,
+  'ho-chi-minh': defaultBackground,
+
+  'long-an': defaultBackground,
+  'tien-giang': defaultBackground,
+  'ben-tre': defaultBackground,
+  'tra-vinh': defaultBackground,
+  'vinh-long': defaultBackground,
+  'dong-thap': defaultBackground,
+  'an-giang': defaultBackground,
+  'kien-giang': defaultBackground,
+  'can-tho': defaultBackground,
+  'hau-giang': defaultBackground,
+  'soc-trang': defaultBackground,
+  'bac-lieu': defaultBackground,
+  'ca-mau': defaultBackground,
+};

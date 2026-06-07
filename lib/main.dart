@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-import 'screens/home_screen.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'screens/main_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('vi', null);
   runApp(const VNWeatherApp());
 }
 
@@ -16,8 +19,9 @@ class VNWeatherApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
         fontFamily: 'Be Vietnam Pro',
+        scaffoldBackgroundColor: Colors.white,
       ),
-      home: const HomeScreen(),
+      home: const MainScreen(),
     );
   }
 }
