@@ -6,6 +6,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:provider/provider.dart';
+import 'package:vietnam_weather_app/providers/settings_provider.dart';
 import '../providers/location_provider.dart';
 import '../data/islands_data.dart';
 import '../services/weather_service.dart';
@@ -52,6 +53,18 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   final WeatherService _weatherService = WeatherService();
   final Map<String, WeatherModel> _cityWeathers = {};
   final Set<String> _animatedVisibleCities = {};
+
+  final Map<String, String> _mapLayers = {
+    'Bản đồ Sáng (Voyager)':
+        'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    'Bản đồ Tối (Dark Matter)':
+        'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    'Đơn giản (Positron)':
+        'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+    'Vệ tinh (Satellite)':
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  };
+  String _selectedLayerName = 'Bản đồ Sáng (Voyager)';
 
   @override
   void initState() {
@@ -161,6 +174,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final locationProvider = context.watch<LocationProvider>();
+    final settings = context.watch<SettingsProvider>();
     final activeSlug = locationProvider.currentSlug;
     final LatLng activeUserLocation = _getCoordinatesFromSlug(activeSlug);
 
@@ -192,8 +206,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
             ),
             children: [
               TileLayer(
-                urlTemplate:
-                    'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+                urlTemplate: _mapLayers[_selectedLayerName]!,
                 subdomains: const ['a', 'b', 'c', 'd'],
                 userAgentPackageName: 'com.example.vn_weather_app',
               ),
@@ -304,7 +317,9 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                                       ),
                                       const SizedBox(width: 3),
                                       Text(
-                                        weather.currentTemp.replaceAll('C', ''),
+                                        settings
+                                            .convertTemp(weather.currentTemp)
+                                            .replaceAll(RegExp(r'[CF]'), ''),
                                         style: const TextStyle(
                                           fontSize: 12,
                                           fontWeight: FontWeight.bold,
@@ -371,27 +386,47 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
           Positioned(
             top: MediaQuery.of(context).padding.top + 16,
             left: 20,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.92),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                  ),
-                ],
-              ),
-              child: Row(
-                children: const [
-                  Icon(LucideIcons.radar, color: Colors.blueAccent, size: 20),
-                  SizedBox(width: 8),
-                  Text(
-                    'Bản đồ Radar',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                  ),
-                ],
+            child: GestureDetector(
+              onTap: () => _showMapLayerOptions(context),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.92),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      LucideIcons.layers,
+                      color: Colors.blueAccent,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      _selectedLayerName,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(
+                      Icons.keyboard_arrow_down,
+                      color: Colors.black54,
+                      size: 18,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -629,6 +664,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     CentralCity city,
     WeatherModel weather,
   ) {
+    final settings = context.read<SettingsProvider>();
     final details = weather.details;
     final uvIndex = details.entries
         .firstWhere(
@@ -641,7 +677,8 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       '',
     );
 
-    String cleanFeelsLike = weather.feelsLike
+    String cleanFeelsLike = settings
+        .convertTemp(weather.feelsLike)
         .replaceAll('Cảm giác như ', '')
         .trim();
     if (cleanFeelsLike.endsWith('.')) {
@@ -690,9 +727,9 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    weather.currentTemp
-                        .replaceAll('°C', '')
-                        .replaceAll('°', ''),
+                    settings
+                        .convertTemp(weather.currentTemp)
+                        .replaceAll(RegExp(r'[°CF]'), ''),
                     style: const TextStyle(
                       fontSize: 70,
                       fontWeight: FontWeight.w200,
@@ -700,9 +737,9 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                       height: 1.0,
                     ),
                   ),
-                  const Text(
-                    '°C',
-                    style: TextStyle(
+                  Text(
+                    settings.unit,
+                    style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.w300,
                       color: Colors.white,
@@ -716,7 +753,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                 style: const TextStyle(fontSize: 18, color: Colors.white70),
               ),
               const SizedBox(height: 8),
-
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -726,7 +762,9 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                     size: 16,
                   ),
                   Text(
-                    details['Thấp/Cao']?.split('/').last ?? '--',
+                    settings.convertTemp(
+                      details['Thấp/Cao']?.split('/').last ?? '--',
+                    ),
                     style: const TextStyle(color: Colors.white70, fontSize: 14),
                   ),
                   const SizedBox(width: 12),
@@ -736,7 +774,9 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                     size: 16,
                   ),
                   Text(
-                    details['Thấp/Cao']?.split('/').first ?? '--',
+                    settings.convertTemp(
+                      details['Thấp/Cao']?.split('/').first ?? '--',
+                    ),
                     style: const TextStyle(color: Colors.white70, fontSize: 14),
                   ),
                 ],
@@ -746,7 +786,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                 'Cảm giác như $cleanFeelsLike',
                 style: const TextStyle(color: Colors.white70, fontSize: 14),
               ),
-
               const SizedBox(height: 24),
               Wrap(
                 spacing: 12,
@@ -833,6 +872,76 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
           ),
         ],
       ),
+    );
+  }
+
+  void _showMapLayerOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.only(top: 12, bottom: 30),
+          decoration: const BoxDecoration(
+            color: Color(0xFF1E1E24),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: Colors.grey[600],
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Lớp Bản Đồ',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ..._mapLayers.keys.map((layerName) {
+                bool isSelected = _selectedLayerName == layerName;
+                return ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 4,
+                  ),
+                  leading: Icon(
+                    isSelected
+                        ? Icons.radio_button_checked
+                        : Icons.radio_button_unchecked,
+                    color: isSelected ? Colors.blueAccent : Colors.white54,
+                  ),
+                  title: Text(
+                    layerName,
+                    style: TextStyle(
+                      color: isSelected ? Colors.white : Colors.white70,
+                      fontWeight: isSelected
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                      fontSize: 16,
+                    ),
+                  ),
+                  onTap: () {
+                    setState(() {
+                      _selectedLayerName = layerName;
+                    });
+                    Navigator.pop(context);
+                  },
+                );
+              }),
+            ],
+          ),
+        );
+      },
     );
   }
 }

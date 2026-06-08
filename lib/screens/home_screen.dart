@@ -3,6 +3,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:vietnam_weather_app/providers/settings_provider.dart';
 import '../models/weather_model.dart';
 import '../models/forecast_model.dart';
 import '../services/weather_service.dart';
@@ -98,6 +99,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<SettingsProvider>();
+
     if (_currentWeather == null) {
       return Scaffold(
         backgroundColor: const Color(0xFF0F172A),
@@ -205,7 +208,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildMainWeather() {
-    String cleanFeelsLike = _currentWeather!.feelsLike
+    final settings = context.read<SettingsProvider>();
+    String cleanFeelsLike = settings
+        .convertTemp(_currentWeather!.feelsLike)
         .replaceAll('Cảm giác như ', '')
         .trim();
     if (cleanFeelsLike.endsWith('.')) {
@@ -219,7 +224,9 @@ class _HomeScreenState extends State<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              _currentWeather!.currentTemp.replaceAll('°', ''),
+              settings
+                  .convertTemp(_currentWeather!.currentTemp)
+                  .replaceAll(RegExp(r'[°CF]'), ''),
               style: const TextStyle(
                 fontSize: 100,
                 fontWeight: FontWeight.w200,
@@ -227,9 +234,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 height: 1.1,
               ),
             ),
-            const Text(
-              '°C',
-              style: TextStyle(
+            Text(
+              settings.unit,
+              style: const TextStyle(
                 fontSize: 30,
                 fontWeight: FontWeight.w300,
                 color: Colors.white,
@@ -251,13 +258,17 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             const Icon(Icons.arrow_upward, color: Colors.white70, size: 16),
             Text(
-              _currentWeather!.details['Thấp/Cao']?.split('/').last ?? '--',
+              settings.convertTemp(
+                _currentWeather!.details['Thấp/Cao']?.split('/').last ?? '--',
+              ),
               style: const TextStyle(color: Colors.white70),
             ),
             const SizedBox(width: 8),
             const Icon(Icons.arrow_downward, color: Colors.white70, size: 16),
             Text(
-              _currentWeather!.details['Thấp/Cao']?.split('/').first ?? '--',
+              settings.convertTemp(
+                _currentWeather!.details['Thấp/Cao']?.split('/').first ?? '--',
+              ),
               style: const TextStyle(color: Colors.white70),
             ),
           ],
@@ -274,6 +285,23 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildHourlyChartCard() {
     if (_hourlyForecast == null || _hourlyForecast!.isEmpty) {
       return const SizedBox.shrink();
+    }
+
+    final settings = context.read<SettingsProvider>();
+    final hourlyData = _hourlyForecast!.take(24).toList();
+
+    List<double> temps = hourlyData.map((f) {
+      String tempStr = settings
+          .convertTemp(f.minTemp)
+          .replaceAll(RegExp(r'[^0-9.-]'), '');
+      return double.tryParse(tempStr) ?? 0.0;
+    }).toList();
+
+    double minT = temps.isEmpty ? 0 : temps.reduce((a, b) => a < b ? a : b);
+    double maxT = temps.isEmpty ? 0 : temps.reduce((a, b) => a > b ? a : b);
+    if (minT == maxT) {
+      minT -= 1;
+      maxT += 1;
     }
 
     return GlassCard(
@@ -293,17 +321,24 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           SizedBox(
-            height: 130,
+            height: 180,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              itemCount: _hourlyForecast!.take(24).length,
+              itemCount: hourlyData.length,
               itemBuilder: (context, index) {
-                final forecast = _hourlyForecast![index];
+                final forecast = hourlyData[index];
+
+                double currentY =
+                    40 - ((temps[index] - minT) / (maxT - minT) * 40);
+                double? nextY;
+                if (index < temps.length - 1) {
+                  nextY = 40 - ((temps[index + 1] - minT) / (maxT - minT) * 40);
+                }
+
                 return SizedBox(
                   width: 65,
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
                         forecast.time,
@@ -312,45 +347,69 @@ class _HomeScreenState extends State<HomeScreen> {
                           fontSize: 13,
                         ),
                       ),
+                      const SizedBox(height: 8),
                       Text(
                         WeatherHelper.getWeatherEmoji(forecast.description),
                         style: const TextStyle(fontSize: 26),
                       ),
-                      Text(
-                        forecast.minTemp,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+
+                      SizedBox(
+                        height: 80,
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            if (nextY != null)
+                              Positioned.fill(
+                                child: CustomPaint(
+                                  painter: _ChartLinePainter(
+                                    currentY: currentY + 30,
+                                    nextY: nextY + 30,
+                                  ),
+                                ),
+                              ),
+
+                            Positioned(
+                              top: currentY,
+                              left: 0,
+                              right: 0,
+                              child: Column(
+                                children: [
+                                  Text(
+                                    settings
+                                        .convertTemp(forecast.minTemp)
+                                        .replaceAll(RegExp(r'[CF]'), ''),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      color: Colors.amberAccent,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: Colors.white,
+                                        width: 2,
+                                      ),
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: Colors.amber,
+                                          blurRadius: 4,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            width: 30,
-                            height: 2,
-                            color: index == 0
-                                ? Colors.transparent
-                                : Colors.white24,
-                          ),
-                          Container(
-                            width: 5,
-                            height: 5,
-                            decoration: const BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          Container(
-                            width: 30,
-                            height: 2,
-                            color: index == 23
-                                ? Colors.transparent
-                                : Colors.white24,
-                          ),
-                        ],
-                      ),
+
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -449,7 +508,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           Text(
-                            forecast.minTemp.replaceAll('C', ''),
+                            context
+                                .read<SettingsProvider>()
+                                .convertTemp(forecast.minTemp)
+                                .replaceAll(RegExp(r'[CF]'), ''),
                             style: const TextStyle(
                               color: Colors.white54,
                               fontSize: 16,
@@ -457,9 +519,11 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           const SizedBox(width: 12),
                           Text(
-                            forecast.maxTemp
+                            context
+                                .read<SettingsProvider>()
+                                .convertTemp(forecast.maxTemp)
                                 .replaceAll('/', '')
-                                .replaceAll('C', '')
+                                .replaceAll(RegExp(r'[CF]'), '')
                                 .trim(),
                             style: const TextStyle(
                               color: Colors.white,
@@ -510,6 +574,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildFullDetailsGrid() {
     final details = _currentWeather!.details;
+    final settings = context.read<SettingsProvider>();
 
     return Wrap(
       spacing: 12,
@@ -518,7 +583,6 @@ class _HomeScreenState extends State<HomeScreen> {
         _detailBox('Độ ẩm', details['Độ ẩm'] ?? '--', Icons.water_drop),
         _detailBox('Tầm nhìn', details['Tầm nhìn'] ?? '--', Icons.visibility),
         _detailBox('Gió', details['Gió'] ?? '--', Icons.air),
-
         _detailBox(
           'Chỉ số UV',
           details.entries
@@ -529,10 +593,9 @@ class _HomeScreenState extends State<HomeScreen> {
               .value,
           Icons.wb_sunny,
         ),
-
         _detailBox(
           'Điểm ngưng',
-          details['Điểm ngưng'] ?? '--',
+          settings.convertTemp(details['Điểm ngưng'] ?? '--'),
           Icons.thermostat,
         ),
         _detailBox('Lượng mưa', _currentWeather!.rainVolume, Icons.umbrella),
@@ -659,7 +722,9 @@ class _HomeScreenState extends State<HomeScreen> {
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: [
                                 Text(
-                                  forecast.minTemp,
+                                  context.read<SettingsProvider>().convertTemp(
+                                    forecast.minTemp,
+                                  ),
                                   style: const TextStyle(
                                     color: Colors.white54,
                                     fontSize: 16,
@@ -667,7 +732,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                                 const SizedBox(width: 12),
                                 Text(
-                                  forecast.maxTemp.replaceAll('/', '').trim(),
+                                  context
+                                      .read<SettingsProvider>()
+                                      .convertTemp(forecast.maxTemp)
+                                      .replaceAll('/', '')
+                                      .trim(),
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 16,
@@ -812,4 +881,30 @@ void _showLocationMenu(BuildContext context) {
       );
     },
   );
+}
+
+class _ChartLinePainter extends CustomPainter {
+  final double currentY;
+  final double nextY;
+
+  _ChartLinePainter({required this.currentY, required this.nextY});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withOpacity(0.4)
+      ..strokeWidth = 2.0
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawLine(
+      Offset(size.width / 2, currentY),
+      Offset(size.width + size.width / 2, nextY),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _ChartLinePainter oldDelegate) {
+    return oldDelegate.currentY != currentY || oldDelegate.nextY != nextY;
+  }
 }
