@@ -32,6 +32,8 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    bool isLightTab = _currentIndex == 2;
+
     return Scaffold(
       extendBody: true,
       body: IndexedStack(index: _currentIndex, children: _screens),
@@ -39,12 +41,17 @@ class _MainScreenState extends State<MainScreen> {
       bottomNavigationBar: ClipRRect(
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
-          child: Container(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.08),
+              color: isLightTab
+                  ? Colors.white.withOpacity(0.85)
+                  : Colors.white.withOpacity(0.08),
               border: Border(
                 top: BorderSide(
-                  color: Colors.white.withOpacity(0.12),
+                  color: isLightTab
+                      ? Colors.black.withOpacity(0.1)
+                      : Colors.white.withOpacity(0.12),
                   width: 1,
                 ),
               ),
@@ -61,8 +68,10 @@ class _MainScreenState extends State<MainScreen> {
               backgroundColor: Colors.transparent,
               elevation: 0,
 
-              selectedItemColor: Colors.white,
-              unselectedItemColor: Colors.white54,
+              selectedItemColor: isLightTab
+                  ? Colors.blueAccent.shade700
+                  : Colors.white,
+              unselectedItemColor: isLightTab ? Colors.black45 : Colors.white54,
 
               selectedFontSize: 12,
               unselectedFontSize: 12,

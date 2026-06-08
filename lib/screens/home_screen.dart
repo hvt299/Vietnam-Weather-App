@@ -24,7 +24,6 @@ class _HomeScreenState extends State<HomeScreen> {
   final WeatherService _weatherService = WeatherService();
   String? _lastSlug;
 
-  bool _isLoading = true;
   WeatherModel? _currentWeather;
   List<ForecastModel>? _hourlyForecast;
   List<ForecastModel>? _dailyForecast;
@@ -41,9 +40,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadAllData(String slug) async {
-    if (_currentWeather == null) {
-      setState(() => _isLoading = true);
-    }
+    if (_currentWeather == null) {}
 
     bool hasInternet = true;
     try {
@@ -63,7 +60,6 @@ class _HomeScreenState extends State<HomeScreen> {
       _currentWeather = results[0] as WeatherModel?;
       _hourlyForecast = results[1] as List<ForecastModel>?;
       _dailyForecast = results[2] as List<ForecastModel>?;
-      _isLoading = false;
     });
 
     if (!hasInternet && mounted) {
@@ -71,17 +67,18 @@ class _HomeScreenState extends State<HomeScreen> {
         SnackBar(
           content: Row(
             children: const [
-              Icon(Icons.wifi_off, color: Colors.white, size: 20),
+              Icon(Icons.wifi_off, color: Colors.white),
               SizedBox(width: 12),
               Expanded(
                 child: Text('Đang ngoại tuyến. Hiển thị dữ liệu lưu tạm.'),
               ),
             ],
           ),
-          backgroundColor: Colors.orange.shade800,
+          backgroundColor: const Color(0xE62E3138),
+          elevation: 0,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(14),
           ),
           margin: const EdgeInsets.all(16),
           duration: const Duration(seconds: 4),
@@ -101,10 +98,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading || _currentWeather == null) {
-      return const Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(child: CircularProgressIndicator(color: Colors.white)),
+    if (_currentWeather == null) {
+      return Scaffold(
+        backgroundColor: const Color(0xFF0F172A),
+        body: const Center(
+          child: CircularProgressIndicator(color: Colors.white),
+        ),
       );
     }
 

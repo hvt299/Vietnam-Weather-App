@@ -48,19 +48,22 @@ class LocationProvider with ChangeNotifier {
 
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      return 'Vui lòng bật Dịch vụ vị trí (GPS) trên thiết bị của bạn.';
+      await changeLocation('ha-noi');
+      return 'Dịch vụ vị trí đang tắt. Hệ thống tự động chuyển về Hà Nội.';
     }
 
     permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        return 'Bạn đã từ chối quyền truy cập vị trí. Không thể lấy tọa độ.';
+        await changeLocation('ha-noi');
+        return 'Quyền vị trí bị từ chối. Hệ thống tự động chuyển về Hà Nội.';
       }
     }
 
     if (permission == LocationPermission.deniedForever) {
-      return 'Quyền vị trí bị từ chối vĩnh viễn. Vui lòng vào Cài đặt máy để mở lại.';
+      await changeLocation('ha-noi');
+      return 'Quyền vị trí bị chặn vĩnh viễn. Hệ thống tự động chuyển về Hà Nội.';
     }
 
     try {
@@ -77,13 +80,15 @@ class LocationProvider with ChangeNotifier {
         String slug = _convertToSlug(adminArea);
 
         if (slug.isNotEmpty) {
-          changeLocation(slug);
+          await changeLocation(slug);
           return null;
         }
       }
-      return 'Không thể xác định được tỉnh/thành phố hiện tại.';
+      await changeLocation('ha-noi');
+      return 'Không xác định được thực thể tỉnh thành. Chuyển về Hà Nội.';
     } catch (e) {
-      return 'Đã xảy ra lỗi khi lấy vị trí: $e';
+      await changeLocation('ha-noi');
+      return 'Không thể xác định vị trí. Đã chuyển về Hà Nội.';
     }
   }
 

@@ -125,33 +125,27 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Widget _buildSearchBar() {
     return GlassCard(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: TextField(
         controller: _searchController,
         onChanged: _onSearchChanged,
+        textAlignVertical: TextAlignVertical.center,
         style: const TextStyle(color: Colors.white, fontSize: 16),
         decoration: InputDecoration(
+          isDense: true,
           hintText: 'Tìm kiếm tỉnh/thành phố...',
           hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+          contentPadding: EdgeInsets.zero,
           prefixIcon: Icon(
             LucideIcons.search,
             color: Colors.white.withOpacity(0.7),
             size: 20,
           ),
+          prefixIconConstraints: const BoxConstraints(
+            minWidth: 36,
+            minHeight: 36,
+          ),
           border: InputBorder.none,
-          suffixIcon: _searchQuery.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(
-                    LucideIcons.x,
-                    color: Colors.white70,
-                    size: 20,
-                  ),
-                  onPressed: () {
-                    _searchController.clear();
-                    _onSearchChanged('');
-                  },
-                )
-              : null,
         ),
       ),
     );
